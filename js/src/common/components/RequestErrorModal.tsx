@@ -1,6 +1,12 @@
-import Modal from './Modal';
+import type RequestError from '../utils/RequestError';
+import Modal, { IInternalModalAttrs } from './Modal';
 
-export default class RequestErrorModal extends Modal {
+export interface IRequestErrorModalAttrs extends IInternalModalAttrs {
+  error: RequestError;
+  formattedError: string[];
+}
+
+export default class RequestErrorModal<CustomAttrs extends IRequestErrorModalAttrs = IRequestErrorModalAttrs> extends Modal<CustomAttrs> {
   className() {
     return 'RequestErrorModal Modal--large';
   }
@@ -16,16 +22,12 @@ export default class RequestErrorModal extends Modal {
 
     // If the error is already formatted, just add line endings;
     // else try to parse it as JSON and stringify it with indentation
-    if (formattedError) {
+    if (formattedError.length) {
       responseText = formattedError.join('\n\n');
+    } else if (error.response) {
+      responseText = JSON.stringify(error.response, null, 2);
     } else {
-      try {
-        const json = error.response || JSON.parse(error.responseText);
-
-        responseText = JSON.stringify(json, null, 2);
-      } catch (e) {
-        responseText = error.responseText;
-      }
+      responseText = error.responseText;
     }
 
     return (

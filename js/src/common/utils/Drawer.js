@@ -27,7 +27,10 @@ export default class Drawer {
     });
 
     this.appElement = document.getElementById('app');
-    this.focusTrap = createFocusTrap('#drawer', { allowOutsideClick: true });
+    // Despite the `focus-trap` documentation, both `clickOutsideDeactivates`
+    // and `allowOutsideClick` are necessary so that inputs in modals triggered
+    // from the drawer's nav components can be interacted with.
+    this.focusTrap = createFocusTrap('#drawer', { allowOutsideClick: true, clickOutsideDeactivates: true });
     this.drawerAvailableMediaQuery = window.matchMedia(
       `(max-width: ${getComputedStyle(document.documentElement).getPropertyValue('--screen-phone-max')})`
     );
@@ -46,7 +49,6 @@ export default class Drawer {
    * @internal
    */
   resizeHandler = ((e) => {
-    console.log(this, e);
     if (!e.matches && this.isOpen()) {
       // Drawer is open but we've made window bigger, so hide it.
       this.hide();
@@ -63,7 +65,6 @@ export default class Drawer {
    * Check whether or not the drawer is currently open.
    *
    * @return {boolean}
-   * @public
    */
   isOpen() {
     return this.appElement.classList.contains('drawerOpen');
@@ -71,8 +72,6 @@ export default class Drawer {
 
   /**
    * Hide the drawer.
-   *
-   * @public
    */
   hide() {
     /**
@@ -100,8 +99,6 @@ export default class Drawer {
 
   /**
    * Show the drawer.
-   *
-   * @public
    */
   show() {
     this.appElement.classList.add('drawerOpen');

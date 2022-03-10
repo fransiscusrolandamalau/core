@@ -23,11 +23,11 @@ export default class AlertManagerState {
   /**
    * Show an Alert in the alerts area.
    *
-   * @returns The alert's ID, which can be used to dismiss the alert.
+   * @return The alert's ID, which can be used to dismiss the alert.
    */
   show(children: Mithril.Children): AlertIdentifier;
   show(attrs: AlertAttrs, children: Mithril.Children): AlertIdentifier;
-  show(componentClass: Alert, attrs: AlertAttrs, children: Mithril.Children): AlertIdentifier;
+  show(componentClass: typeof Alert, attrs: AlertAttrs, children: Mithril.Children): AlertIdentifier;
 
   show(arg1: any, arg2?: any, arg3?: any) {
     // Assigns variables as per the above signatures

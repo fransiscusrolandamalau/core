@@ -9,8 +9,8 @@ import icon from '../../common/helpers/icon';
 import SearchState from '../states/SearchState';
 import DiscussionsSearchSource from './DiscussionsSearchSource';
 import UsersSearchSource from './UsersSearchSource';
+import { fireDeprecationWarning } from '../../common/helpers/fireDebugWarning';
 import type Mithril from 'mithril';
-import Model from '../../common/Model';
 
 /**
  * The `SearchSource` interface defines a section of search results in the
@@ -53,13 +53,34 @@ export interface SearchAttrs extends ComponentAttrs {
  *
  * - state: SearchState instance.
  */
-export default class Search<T extends SearchAttrs = SearchAttrs> extends Component<T> {
+export default class Search<T extends SearchAttrs = SearchAttrs> extends Component<T, SearchState> {
   /**
    * The minimum query length before sources are searched.
    */
   protected static MIN_SEARCH_LEN = 3;
 
+  /**
+   * The instance of `SearchState` for this component.
+   */
   protected searchState!: SearchState;
+
+  /**
+   * The instance of `SearchState` for this component.
+   *
+   * @deprecated Replace with`this.searchState` instead.
+   */
+  // TODO: [Flarum 2.0] Remove this.
+  // @ts-expect-error This is a get accessor, while superclass defines this as a property. This is needed to prevent breaking changes, however.
+  protected get state() {
+    fireDeprecationWarning('`state` property of the Search component is deprecated', '3212');
+    return this.searchState;
+  }
+  protected set state(state: SearchState) {
+    // Workaround to prevent triggering deprecation warnings due to Mithril
+    // setting state to undefined when creating components
+    state !== undefined && fireDeprecationWarning('`state` property of the Search component is deprecated', '3212');
+    this.searchState = state;
+  }
 
   /**
    * Whether or not the search input has focus.
@@ -69,7 +90,7 @@ export default class Search<T extends SearchAttrs = SearchAttrs> extends Compone
   /**
    * An array of SearchSources.
    */
-  protected sources!: SearchSource[];
+  protected sources?: SearchSource[];
 
   /**
    * The number of sources that are still loading results.
@@ -140,6 +161,7 @@ export default class Search<T extends SearchAttrs = SearchAttrs> extends Compone
               className="Search-clear Button Button--icon Button--link"
               onclick={this.clear.bind(this)}
               aria-label={app.translator.trans('core.forum.header.search_clear_button_accessible_label')}
+              type="button"
             >
               {icon('fas fa-times-circle')}
             </button>
@@ -173,13 +195,17 @@ export default class Search<T extends SearchAttrs = SearchAttrs> extends Compone
     this.setIndex(this.getCurrentNumericIndex());
 
     // If there are no sources, the search view is not shown.
-    if (!this.sources.length) return;
+    if (!this.sources?.length) return;
 
     this.updateMaxHeight();
   }
 
   oncreate(vnode: Mithril.VnodeDOM<T, this>) {
     super.oncreate(vnode);
+
+    // If there are no sources, we shouldn't initialize logic for
+    // search elements, as they will not be shown.
+    if (!this.sources?.length) return;
 
     const search = this;
     const state = this.searchState;
@@ -218,7 +244,7 @@ export default class Search<T extends SearchAttrs = SearchAttrs> extends Compone
           if (state.isCached(query)) return;
 
           if (query.length >= (search.constructor as typeof Search).MIN_SEARCH_LEN) {
-            search.sources.map((source) => {
+            search.sources?.map((source) => {
               if (!source.search) return;
 
               search.loadingSources++;
@@ -299,9 +325,10 @@ export default class Search<T extends SearchAttrs = SearchAttrs> extends Compone
 
   /**
    * Get the position of the currently selected search result item.
+   * Returns zero if not found.
    */
   getCurrentNumericIndex(): number {
-    return this.selectableItems().index(this.getItem(this.index));
+    return Math.max(0, this.selectableItems().index(this.getItem(this.index)));
   }
 
   /**

@@ -1,5 +1,5 @@
 import app from '../../forum/app';
-import Modal from '../../common/components/Modal';
+import Modal, { IInternalModalAttrs } from '../../common/components/Modal';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import SignUpModal from './SignUpModal';
 import Button from '../../common/components/Button';
@@ -7,38 +7,34 @@ import LogInButtons from './LogInButtons';
 import extractText from '../../common/utils/extractText';
 import ItemList from '../../common/utils/ItemList';
 import Stream from '../../common/utils/Stream';
+import type Mithril from 'mithril';
+import RequestError from '../../common/utils/RequestError';
 
-/**
- * The `LogInModal` component displays a modal dialog with a login form.
- *
- * ### Attrs
- *
- * - `identification`
- * - `password`
- */
-export default class LogInModal extends Modal {
-  oninit(vnode) {
+export interface ILoginModalAttrs extends IInternalModalAttrs {
+  identification?: string;
+  password?: string;
+  remember?: boolean;
+}
+
+export default class LogInModal<CustomAttrs extends ILoginModalAttrs = ILoginModalAttrs> extends Modal<CustomAttrs> {
+  /**
+   * The value of the identification input.
+   */
+  identification!: Stream<string>;
+  /**
+   * The value of the password input.
+   */
+  password!: Stream<string>;
+  /**
+   * The value of the remember me input.
+   */
+  remember!: Stream<boolean>;
+
+  oninit(vnode: Mithril.Vnode<CustomAttrs, this>) {
     super.oninit(vnode);
 
-    /**
-     * The value of the identification input.
-     *
-     * @type {Function}
-     */
     this.identification = Stream(this.attrs.identification || '');
-
-    /**
-     * The value of the password input.
-     *
-     * @type {Function}
-     */
     this.password = Stream(this.attrs.password || '');
-
-    /**
-     * The value of the remember me input.
-     *
-     * @type {Function}
-     */
     this.remember = Stream(!!this.attrs.remember);
   }
 
@@ -61,6 +57,9 @@ export default class LogInModal extends Modal {
   fields() {
     const items = new ItemList();
 
+    const identificationLabel = extractText(app.translator.trans('core.forum.log_in.username_or_email_placeholder'));
+    const passwordLabel = extractText(app.translator.trans('core.forum.log_in.password_placeholder'));
+
     items.add(
       'identification',
       <div className="Form-group">
@@ -68,7 +67,8 @@ export default class LogInModal extends Modal {
           className="FormControl"
           name="identification"
           type="text"
-          placeholder={extractText(app.translator.trans('core.forum.log_in.username_or_email_placeholder'))}
+          placeholder={identificationLabel}
+          aria-label={identificationLabel}
           bidi={this.identification}
           disabled={this.loading}
         />
@@ -84,7 +84,8 @@ export default class LogInModal extends Modal {
           name="password"
           type="password"
           autocomplete="current-password"
-          placeholder={extractText(app.translator.trans('core.forum.log_in.password_placeholder'))}
+          placeholder={passwordLabel}
+          aria-label={passwordLabel}
           bidi={this.password}
           disabled={this.loading}
         />
@@ -140,12 +141,10 @@ export default class LogInModal extends Modal {
   /**
    * Open the forgot password modal, prefilling it with an email if the user has
    * entered one.
-   *
-   * @public
    */
   forgotPassword() {
     const email = this.identification();
-    const attrs = email.indexOf('@') !== -1 ? { email } : undefined;
+    const attrs = email.includes('@') ? { email } : undefined;
 
     app.modal.show(ForgotPasswordModal, attrs);
   }
@@ -153,13 +152,14 @@ export default class LogInModal extends Modal {
   /**
    * Open the sign up modal, prefilling it with an email/username/password if
    * the user has entered one.
-   *
-   * @public
    */
   signUp() {
-    const attrs = { password: this.password() };
     const identification = this.identification();
-    attrs[identification.indexOf('@') !== -1 ? 'email' : 'username'] = identification;
+
+    const attrs = {
+      [identification.includes('@') ? 'email' : 'username']: identification,
+      password: this.password(),
+    };
 
     app.modal.show(SignUpModal, attrs);
   }
@@ -168,7 +168,7 @@ export default class LogInModal extends Modal {
     this.$('[name=' + (this.identification() ? 'password' : 'identification') + ']').select();
   }
 
-  onsubmit(e) {
+  onsubmit(e: SubmitEvent) {
     e.preventDefault();
 
     this.loading = true;
@@ -182,8 +182,8 @@ export default class LogInModal extends Modal {
       .then(() => window.location.reload(), this.loaded.bind(this));
   }
 
-  onerror(error) {
-    if (error.status === 401) {
+  onerror(error: RequestError) {
+    if (error.status === 401 && error.alert) {
       error.alert.content = app.translator.trans('core.forum.log_in.invalid_login_message');
     }
 

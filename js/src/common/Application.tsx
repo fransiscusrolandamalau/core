@@ -9,6 +9,7 @@ import Translator from './Translator';
 import Store, { ApiPayload, ApiResponse, ApiResponsePlural, ApiResponseSingle, payloadIsPlural } from './Store';
 import Session from './Session';
 import extract from './utils/extract';
+import extractText from './utils/extractText';
 import Drawer from './utils/Drawer';
 import mapRoutes from './utils/mapRoutes';
 import RequestError, { InternalFlarumRequestOptions } from './utils/RequestError';
@@ -105,14 +106,21 @@ export interface RouteResolver<
    *
    * Returns the component class, and **not** a Vnode or JSX
    * expression.
+   *
+   * @see https://mithril.js.org/route.html#routeresolveronmatch
    */
   onmatch(this: this, args: RouteArgs, requestedPath: string, route: string): { new (): Comp };
   /**
    * A function which renders the provided component.
    *
+   * If not specified, the route will default to rendering the
+   * component on its own, inside of a fragment.
+   *
    * Returns a Mithril Vnode or other children.
+   *
+   * @see https://mithril.js.org/route.html#routeresolverrender
    */
-  render(this: this, vnode: Mithril.Vnode<Attrs, Comp>): Mithril.Children;
+  render?(this: this, vnode: Mithril.Vnode<Attrs, Comp>): Mithril.Children;
 }
 
 /**
@@ -365,9 +373,21 @@ export default class Application {
 
   updateTitle(): void {
     const count = this.titleCount ? `(${this.titleCount}) ` : '';
-    const pageTitleWithSeparator = this.title && m.route.get() !== this.forum.attribute('basePath') + '/' ? this.title + ' - ' : '';
-    const title = this.forum.attribute('title');
-    document.title = count + pageTitleWithSeparator + title;
+    const onHomepage = m.route.get() === this.forum.attribute('basePath') + '/';
+
+    const params = {
+      pageTitle: this.title,
+      forumName: this.forum.attribute('title'),
+      // Until we add page numbers to the frontend, this is constant at 1
+      // so that the page number portion doesn't show up in the URL.
+      pageNumber: 1,
+    };
+
+    const title =
+      onHomepage || !this.title
+        ? extractText(app.translator.trans('core.lib.meta_titles.without_page_title', params))
+        : extractText(app.translator.trans('core.lib.meta_titles.with_page_title', params));
+    document.title = count + title;
   }
 
   protected transformRequestOptions<ResponseType>(flarumOptions: FlarumRequestOptions<ResponseType>): InternalFlarumRequestOptions<ResponseType> {
@@ -451,9 +471,6 @@ export default class Application {
    * Make an AJAX request, handling any low-level errors that may occur.
    *
    * @see https://mithril.js.org/request.html
-   *
-   * @param options
-   * @return {Promise}
    */
   request<ResponseType>(originalOptions: FlarumRequestOptions<ResponseType>): Promise<ResponseType> {
     const options = this.transformRequestOptions(originalOptions);
@@ -530,7 +547,11 @@ export default class Application {
 
         console.group(`${method} ${url} ${status}`);
 
-        console.error(...(formattedErrors || [e]));
+        if (formattedErrors.length) {
+          console.error(...formattedErrors);
+        } else {
+          console.error(e);
+        }
 
         console.groupEnd();
       }

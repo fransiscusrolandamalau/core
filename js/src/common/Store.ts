@@ -1,5 +1,6 @@
 import app from '../common/app';
 import { FlarumRequestOptions } from './Application';
+import { fireDeprecationWarning } from './helpers/fireDebugWarning';
 import Model, { ModelData, SavedModelData } from './Model';
 
 export interface MetaInformation {
@@ -93,7 +94,7 @@ export default class Store {
    *     within the 'data' key of the payload.
    */
   pushPayload<M extends Model>(payload: ApiPayloadSingle): ApiResponseSingle<M>;
-  pushPayload<Ms extends Model[]>(payload: ApiPayloadPlural): ApiResponseSingle<Ms[number]>;
+  pushPayload<Ms extends Model[]>(payload: ApiPayloadPlural): ApiResponsePlural<Ms[number]>;
   pushPayload<M extends Model | Model[]>(payload: ApiPayload): ApiResponse<FlatArray<M, 1>> {
     if (payload.included) payload.included.map(this.pushObject.bind(this));
 
@@ -120,11 +121,13 @@ export default class Store {
   pushObject<M extends Model>(data: SavedModelData, allowUnregistered: false): M;
   pushObject<M extends Model>(data: SavedModelData, allowUnregistered = true): M | null {
     if (!this.models[data.type]) {
-      if (allowUnregistered) {
-        return null;
+      if (!allowUnregistered) {
+        setTimeout(() =>
+          fireDeprecationWarning(`Pushing object of type \`${data.type}\` not allowed, as type not yet registered in the store.`, '3206')
+        );
       }
 
-      throw new Error(`Cannot push object of type ${data.type}, as that type has not yet been registered in the store.`);
+      return null;
     }
 
     const type = (this.data[data.type] = this.data[data.type] || {});

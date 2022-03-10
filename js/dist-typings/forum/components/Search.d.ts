@@ -42,12 +42,22 @@ export interface SearchAttrs extends ComponentAttrs {
  *
  * - state: SearchState instance.
  */
-export default class Search<T extends SearchAttrs = SearchAttrs> extends Component<T> {
+export default class Search<T extends SearchAttrs = SearchAttrs> extends Component<T, SearchState> {
     /**
      * The minimum query length before sources are searched.
      */
     protected static MIN_SEARCH_LEN: number;
+    /**
+     * The instance of `SearchState` for this component.
+     */
     protected searchState: SearchState;
+    /**
+     * The instance of `SearchState` for this component.
+     *
+     * @deprecated Replace with`this.searchState` instead.
+     */
+    protected get state(): SearchState;
+    protected set state(state: SearchState);
     /**
      * Whether or not the search input has focus.
      */
@@ -55,7 +65,7 @@ export default class Search<T extends SearchAttrs = SearchAttrs> extends Compone
     /**
      * An array of SearchSources.
      */
-    protected sources: SearchSource[];
+    protected sources?: SearchSource[];
     /**
      * The number of sources that are still loading results.
      */
@@ -94,6 +104,7 @@ export default class Search<T extends SearchAttrs = SearchAttrs> extends Compone
     selectableItems(): JQuery;
     /**
      * Get the position of the currently selected search result item.
+     * Returns zero if not found.
      */
     getCurrentNumericIndex(): number;
     /**

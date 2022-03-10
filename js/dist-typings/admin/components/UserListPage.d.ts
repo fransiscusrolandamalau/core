@@ -1,4 +1,4 @@
-/// <reference path="../../../src/common/translator-icu-rich.d.ts" />
+/// <reference path="../../@types/translator-icu-rich.d.ts" />
 import type Mithril from 'mithril';
 import type User from '../../common/models/User';
 import ItemList from '../../common/utils/ItemList';
@@ -7,7 +7,7 @@ declare type ColumnData = {
     /**
      * Column title
      */
-    name: String;
+    name: Mithril.Children;
     /**
      * Component(s) to show for this column.
      */

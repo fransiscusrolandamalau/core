@@ -24,16 +24,19 @@ export default class ModalManager extends Component<IModalManagerAttrs> {
 
   view(vnode: Mithril.VnodeDOM<IModalManagerAttrs, this>): Mithril.Children {
     const modal = this.attrs.state.modal;
+    const Tag = modal?.componentClass;
 
     return (
       <div className="ModalManager modal fade">
-        {!!modal &&
-          modal.componentClass.component({
-            ...modal.attrs,
-            animateShow: this.animateShow.bind(this),
-            animateHide: this.animateHide.bind(this),
-            state: this.attrs.state,
-          })}
+        {!!Tag && (
+          <Tag
+            key={modal?.key}
+            {...modal.attrs}
+            animateShow={this.animateShow.bind(this)}
+            animateHide={this.animateHide.bind(this)}
+            state={this.attrs.state}
+          />
+        )}
       </div>
     );
   }
@@ -46,7 +49,7 @@ export default class ModalManager extends Component<IModalManagerAttrs> {
     // e.g. via ESC key or a click on the modal backdrop.
     this.$().on('hidden.bs.modal', this.attrs.state.close.bind(this.attrs.state));
 
-    this.focusTrap = createFocusTrap(this.element as HTMLElement);
+    this.focusTrap = createFocusTrap(this.element as HTMLElement, { allowOutsideClick: true });
   }
 
   onupdate(vnode: Mithril.VnodeDOM<IModalManagerAttrs, this>): void {
